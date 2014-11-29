@@ -1,4 +1,5 @@
 require "sinatra"
+require 'active_support/all'
 require "httparty"
 
 $stdout.sync = true
@@ -55,7 +56,6 @@ class Sleep
 
     # session_range_start && _end are undocumented
 
-    @properties = opts["properties"]
 
     @time_value_tracks = {}
     opts["time_value_tracks"].each_key do |what|
@@ -69,10 +69,38 @@ class Sleep
       end
 
       @time_value_tracks[what]["value_data_type"] = opts["time_value_tracks"][what]["value_data_type"]
-
     end
 
     @updated = Time.at(opts["updated"]).utc.iso8601
+
+    @properties = opts["properties"]
+
+    @properties.merge!({
+      "snoring_episodes_count" => @time_value_tracks["snoring_episodes"]["items"].count
+    })
+
+    deepness_levels = {}
+    previous_time = nil
+    @time_value_tracks["sleep_cycles"]["items"].each do |time_and_deepness|
+      time_string, deepness = time_and_deepness
+
+      time = Time.parse(time_string)
+
+      unless previous_time
+        previous_time = time
+        next
+      end
+
+      seconds = (time - previous_time).to_i
+      level = (deepness.round(1) * 10).round
+
+      deepness_levels[level] = 0 unless deepness_levels[level]
+      deepness_levels[level] += seconds
+
+      previous_time = time
+    end
+
+    @properties["deepness_levels"] = deepness_levels
 
   end
 
