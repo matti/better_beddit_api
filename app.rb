@@ -68,6 +68,8 @@ class Sleep
         @time_value_tracks[what]["items"] << [Time.at(unix_timestamp).utc.iso8601, value]
       end
 
+      @time_value_tracks[what]["value_data_type"] = opts["time_value_tracks"][what]["value_data_type"]
+
     end
 
     @updated = Time.at(opts["updated"]).utc.iso8601
