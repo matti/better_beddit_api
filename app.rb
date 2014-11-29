@@ -104,6 +104,8 @@ class Sleep
 
   end
 
+  attr_reader :id, :started_at, :ended_at, :properties, :time_value_tracks, :updated
+
   def to_json
     {
       id: @id,
@@ -117,8 +119,102 @@ class Sleep
   end
 end
 
-get '/v2/authenticated_user/sleeps' do
+get '/v2/authenticated_user/sleeps.csv' do
+  authenticate_to_beddit(params[:username], params[:password])
+  sleeps = get_sleeps()
 
+  content_type 'application/csv'
+
+  attachment "sleeps.csv"
+  csv_string = CSV.generate do |csv|
+    csv << [
+      "id",
+      "started at",
+      "ended at",
+      "avg respiration rate",
+      "total snoring duration",
+      "sleep latency",
+      "short term avg respiration rate",
+      "short term resting HR",
+      "away count",
+      "resting HR",
+      "snoring count",
+      "deepness_10",
+      "deepness_9",
+      "deepness_8",
+      "deepness_7",
+      "deepness_6",
+      "deepness_5",
+      "deepness_4",
+      "deepness_3",
+      "deepness_2",
+      "deepness_1",
+      "deepness_0"
+    ]
+    for sleep_hash in sleeps do
+      sleep_hash.merge!({ "user_id" => $user.id })
+      sleep = Sleep.new(sleep_hash)
+      csv << [
+        sleep.id,
+        sleep.started_at,
+        sleep.ended_at,
+        sleep.properties["average_respiration_rate"],
+        sleep.properties["total_snoring_episode_duration"],
+        sleep.properties["sleep_latency"],
+        sleep.properties["short_term_average_respiration_rate"],
+        sleep.properties["short_term_resting_heart_rate"],
+        sleep.properties["away_episode_count"],
+        sleep.properties["resting_heart_rate"],
+        sleep.properties["snoring_episodes_count"],
+        sleep.properties["deepness_levels"][10],
+        sleep.properties["deepness_levels"][9],
+        sleep.properties["deepness_levels"][8],
+        sleep.properties["deepness_levels"][7],
+        sleep.properties["deepness_levels"][6],
+        sleep.properties["deepness_levels"][5],
+        sleep.properties["deepness_levels"][4],
+        sleep.properties["deepness_levels"][3],
+        sleep.properties["deepness_levels"][2],
+        sleep.properties["deepness_levels"][1],
+        sleep.properties["deepness_levels"][0]
+      ]
+    end
+  end
+
+  csv_string
+
+end
+
+get '/v2/authenticated_user/sleeps' do
+  authenticate_to_beddit(params[:username], params[:password])
+  sleeps = get_sleeps()
+
+  better_sleeps = []
+
+  for sleep in sleeps do
+    sleep.merge!({ "user_id" => $user.id })
+    better_sleeps << Sleep.new(sleep).to_json
+  end
+
+  better_sleeps.to_json
+
+end
+
+private
+
+def get_sleeps
+  sleeps_response = HTTParty.get "#{ENDPOINT}/api/v1/user/#{$user.id}/sleep", {
+    :headers => {
+      "Authorization" => "UserToken #{$user.access_token}"
+    }
+  }
+
+  raise "lol" unless sleeps_response.code == 200
+
+  sleeps_response.parsed_response
+end
+
+def authenticate_to_beddit(username, password)
   login_options = {
     "grant_type" => "password",
     "username" => params[:username],
@@ -134,24 +230,4 @@ get '/v2/authenticated_user/sleeps' do
   else
     raise "lul"
   end
-
-  sleeps_response = HTTParty.get "#{ENDPOINT}/api/v1/user/#{$user.id}/sleep", {
-    :headers => {
-      "Authorization" => "UserToken #{$user.access_token}"
-    }
-  }
-
-  raise "lol" unless sleeps_response.code == 200
-
-  sleeps = sleeps_response.parsed_response
-
-  better_sleeps = []
-
-  for sleep in sleeps do
-    sleep.merge!({ "user_id" => $user.id })
-    better_sleeps << Sleep.new(sleep).to_json
-  end
-
-  better_sleeps.to_json
-
 end
