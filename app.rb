@@ -129,6 +129,7 @@ get '/v2/authenticated_user/sleeps.csv' do
   csv_string = CSV.generate do |csv|
     csv << [
       "id",
+      "user_id",
       "started at",
       "ended at",
       "avg respiration rate",
@@ -153,9 +154,11 @@ get '/v2/authenticated_user/sleeps.csv' do
     ]
     for sleep_hash in sleeps do
       sleep_hash.merge!({ "user_id" => $user.id })
+
       sleep = Sleep.new(sleep_hash)
       csv << [
         sleep.id,
+        sleep.user_id,
         sleep.started_at,
         sleep.ended_at,
         sleep.properties["average_respiration_rate"],
