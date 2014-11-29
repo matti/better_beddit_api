@@ -16,33 +16,33 @@ class User
 
 end
 
-use Rack::Auth::Basic, "Restricted Area" do |username, password|
-
-  if ENV['BEDDIT_ACCESS_TOKEN'] && ENV['BEDDIT_USER_ID']
-    $user = User.new({
-      "user" => ENV["BEDDIT_USER_ID"],
-      "access_token" => ENV["BEDDIT_ACCESS_TOKEN"]
-    })
-
-  else
-
-    login_options = {
-      "grant_type" => "password",
-      "username" => username,
-      "password" => password
-    }
-
-    login_response = HTTParty.post "#{ENDPOINT}/api/v1/auth/authorize", {
-      body: login_options
-    }
-
-    if login_response.code == 200
-      $user = User.new(login_response.parsed_response)
-    end
-  end
-
-  $user != nil
-end
+# use Rack::Auth::Basic, "Restricted Area" do |username, password|
+#
+#   if ENV['BEDDIT_ACCESS_TOKEN'] && ENV['BEDDIT_USER_ID']
+#     $user = User.new({
+#       "user" => ENV["BEDDIT_USER_ID"],
+#       "access_token" => ENV["BEDDIT_ACCESS_TOKEN"]
+#     })
+#
+#   else
+#
+#     login_options = {
+#       "grant_type" => "password",
+#       "username" => username,
+#       "password" => password
+#     }
+#
+#     login_response = HTTParty.post "#{ENDPOINT}/api/v1/auth/authorize", {
+#       body: login_options
+#     }
+#
+#     if login_response.code == 200
+#       $user = User.new(login_response.parsed_response)
+#     end
+#   end
+#
+#   $user != nil
+# end
 
 class Sleep
   attr_reader :id
@@ -118,6 +118,22 @@ class Sleep
 end
 
 get '/v2/authenticated_user/sleeps' do
+
+  login_options = {
+    "grant_type" => "password",
+    "username" => params[:username],
+    "password" => params[:password]
+  }
+
+  login_response = HTTParty.post "#{ENDPOINT}/api/v1/auth/authorize", {
+    body: login_options
+  }
+
+  if login_response.code == 200
+    $user = User.new(login_response.parsed_response)
+  else
+    raise "lul"
+  end
 
   sleeps_response = HTTParty.get "#{ENDPOINT}/api/v1/user/#{$user.id}/sleep", {
     :headers => {
